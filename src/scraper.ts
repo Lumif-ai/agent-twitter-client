@@ -1,4 +1,4 @@
-import { Cookie } from 'tough-cookie';
+import { Cookie, fromJSON } from 'tough-cookie';
 import {
   bearerToken,
   FetchTransformOptions,
@@ -1105,5 +1105,9 @@ export class Scraper {
     }
 
     return allQuotes;
+  }
+
+  public fromCookie(cookie: string): Cookie {
+    return fromJSON(cookie);
   }
 }
