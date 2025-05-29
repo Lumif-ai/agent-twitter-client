@@ -326,6 +326,7 @@ function parseTimelineTweet(
     retweets: tweet.retweet_count,
     text: tweet.full_text,
     thread: [],
+    replyTweets: [],
     urls: urls
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),

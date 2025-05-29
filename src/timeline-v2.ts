@@ -161,6 +161,7 @@ export function parseLegacyTweet(
     retweets: tweet.retweet_count,
     text: tweet.full_text,
     thread: [],
+    replyTweets: [],
     urls: urls
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),
@@ -371,6 +372,8 @@ export function parseAndPush(
   if (tweet) {
     tweets.push(tweet);
   }
+
+  return tweet;
 }
 
 export function parseThreadedConversation(
@@ -381,8 +384,11 @@ export function parseThreadedConversation(
     conversation.data?.threaded_conversation_with_injections_v2?.instructions ??
     [];
 
+  console.log('Total instructions:', instructions.length);
+
   for (const instruction of instructions) {
     const entries = instruction.entries ?? [];
+    console.log('Processing entries:', entries.length);
     for (const entry of entries) {
       const entryContent = entry.content?.itemContent;
       if (entryContent) {
@@ -421,6 +427,23 @@ export function parseThreadedConversation(
     }
   }
 
+  // Add all replies to the main tweet's replyTweets array
+  for (const tweet of tweets) {
+    if (tweet.conversationId === tweet.id) {
+      // This is the main tweet - collect all replies
+      for (const potentialReply of tweets) {
+        if (potentialReply.conversationId === tweet.id && 
+            potentialReply.id !== tweet.id && 
+            !potentialReply.isSelfThread &&
+            potentialReply.inReplyToStatusId) {
+          console.log('Adding reply:', potentialReply.id, 'to tweet:', tweet.id);
+          tweet.replyTweets.push(potentialReply);
+        }
+      }
+    }
+  }
+
+  console.log('Final tweet count:', tweets.length);
   return tweets;
 }
 

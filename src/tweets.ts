@@ -186,6 +186,7 @@ export interface Tweet {
   retweetedStatusId?: string;
   text?: string;
   thread: Tweet[];
+  replyTweets: Tweet[];
   timeParsed?: Date;
   timestamp?: number;
   urls: string[];
@@ -373,6 +374,7 @@ export function parseTweetV2ToV1(
     name: defaultTweetData?.name ?? '',
     place: defaultTweetData?.place,
     thread: defaultTweetData?.thread ?? [],
+    replyTweets: defaultTweetData?.replyTweets ?? []
   };
 
   // Process Polls
@@ -879,6 +881,9 @@ export async function getTweet(
   auth: TwitterAuth,
 ): Promise<Tweet | null> {
   const tweetDetailRequest = apiRequestFactory.createTweetDetailRequest();
+  if (!tweetDetailRequest.variables) {
+    throw new Error('Tweet detail request variables not initialized');
+  }
   tweetDetailRequest.variables.focalTweetId = id;
 
   const res = await requestApi<ThreadedConversation>(

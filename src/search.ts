@@ -4,6 +4,7 @@ import { Profile } from './profile';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTweetTimeline, getUserTimeline } from './timeline-async';
 import { Tweet } from './tweets';
+
 import {
   SearchTimeline,
   parseSearchTimelineTweets,
@@ -141,7 +142,7 @@ async function getSearchTimeline(
   params.set('features', stringify(features) ?? '');
   params.set('fieldToggles', stringify(fieldToggles) ?? '');
   params.set('variables', stringify(variables) ?? '');
-
+  console.log(`https://x.com/i/api/graphql/Tp1sewRU1AsZpBWhqCZicQ/SearchTimeline?${params.toString()}`)
   const res = await requestApi<SearchTimeline>(
     `https://x.com/i/api/graphql/Tp1sewRU1AsZpBWhqCZicQ/SearchTimeline?${params.toString()}`,
     auth,

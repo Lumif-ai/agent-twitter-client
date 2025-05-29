@@ -105,6 +105,7 @@ import {
 const twUrl = 'https://twitter.com';
 const UserTweetsUrl =
   'https://twitter.com/i/api/graphql/E3opETHurmVJflFsUBVuUQ/UserTweets';
+const TweetDetailUrl = 'https://x.com/i/api/graphql/u5Tij6ERlSH2LZvCUqallw/TweetDetail';
 
 export interface ScraperOptions {
   /**
@@ -1106,7 +1107,6 @@ export class Scraper {
 
     return allQuotes;
   }
-
   public fromCookie(cookie: string): Cookie {
     return fromJSON(cookie);
   }
