@@ -4,7 +4,6 @@ import { Profile } from './profile';
 import { QueryProfilesResponse, QueryTweetsResponse } from './timeline-v1';
 import { getTweetTimeline, getUserTimeline } from './timeline-async';
 import { Tweet } from './tweets';
-
 import {
   SearchTimeline,
   parseSearchTimelineTweets,
@@ -102,15 +101,6 @@ async function getSearchTimeline(
   };
 
   const features = addApiFeatures({
-    longform_notetweets_inline_media_enabled: true,
-    responsive_web_enhance_cards_enabled: false,
-    responsive_web_media_download_video_enabled: false,
-    responsive_web_twitter_article_tweet_consumption_enabled: false,
-    tweet_with_visibility_results_prefer_gql_limited_actions_policy_enabled:
-      true,
-    interactive_text_enabled: false,
-    responsive_web_text_conversations_enabled: false,
-    vibe_api_enabled: false,
   });
 
   const fieldToggles: Record<string, any> = {
@@ -139,12 +129,13 @@ async function getSearchTimeline(
   }
 
   const params = new URLSearchParams();
-  params.set('features', stringify(features) ?? '');
-  params.set('fieldToggles', stringify(fieldToggles) ?? '');
   params.set('variables', stringify(variables) ?? '');
-  console.log(`https://x.com/i/api/graphql/Tp1sewRU1AsZpBWhqCZicQ/SearchTimeline?${params.toString()}`)
+  params.set('features', stringify(features) ?? '');
+  // params.set('fieldToggles', stringify(fieldToggles) ?? '');
+ 
+  console.log(`https://x.com/i/api/graphql/fDwnkykAJtODs46h_XZfVg/SearchTimeline?${params.toString()}`)
   const res = await requestApi<SearchTimeline>(
-    `https://x.com/i/api/graphql/Tp1sewRU1AsZpBWhqCZicQ/SearchTimeline?${params.toString()}`,
+    `https://x.com/i/api/graphql/fDwnkykAJtODs46h_XZfVg/SearchTimeline?${params.toString()}`,
     auth,
   );
 
