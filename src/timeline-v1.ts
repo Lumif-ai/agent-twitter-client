@@ -154,6 +154,7 @@ export interface TimelineResultRaw {
 }
 
 export interface LegacyTweetRaw {
+  tweetDisplayType?: string;
   bookmark_count?: number;
   conversation_id_str?: string;
   created_at?: string;

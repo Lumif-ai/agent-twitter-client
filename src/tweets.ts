@@ -196,6 +196,7 @@ export interface Tweet {
   views?: number;
   sensitiveContent?: boolean;
   poll?: PollV2 | null;
+  tweetDisplayType?: string;
 }
 
 export interface Retweeter {
