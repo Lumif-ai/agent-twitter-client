@@ -142,6 +142,20 @@ export function parseLegacyTweet(
   const urls = tweet.entities?.urls ?? [];
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
 
+  // Determine tweet display type based on properties
+  let displayType = tweetDisplayType || '';
+  if (!displayType) {
+    if (tweet.quoted_status_id_str) {
+      displayType = 'Quote';
+    } else if (tweet.retweeted_status_id_str || tweet.retweeted_status_result) {
+      displayType = 'Retweet';
+    } else if (tweet.conversation_id_str === tweet.id_str && (tweet.reply_count ?? 0) > 0) {
+      displayType = 'SelfThread';
+    } else {
+      displayType = 'Tweet';
+    }
+  }
+
   const tw: Tweet = {
     bookmarkCount: tweet.bookmark_count,
     conversationId: tweet.conversation_id_str,
@@ -174,7 +188,7 @@ export function parseLegacyTweet(
     isRetweet: false,
     isPin: false,
     sensitiveContent: false,
-    tweetDisplayType: tweetDisplayType || '',
+    tweetDisplayType: displayType,
   };
 
   if (tweet.created_at) {
@@ -410,12 +424,12 @@ export function parseThreadedConversation(conversation: ThreadedConversation): T
   // First pass: Link replies to their parent tweets
   for (const tweet of tweets) {
     if (tweet.inReplyToStatusId) {
-      for (const parentTweet of tweets) {
-        if (parentTweet.id === tweet.inReplyToStatusId && tweet.tweetDisplayType === 'Tweet') {
-          tweet.inReplyToStatus = parentTweet;
-          // Add reply to parent tweet's replyTweets array
+      const parentTweet = tweets.find(t => t.id === tweet.inReplyToStatusId);
+      if (parentTweet) {
+        tweet.inReplyToStatus = parentTweet;
+        // Add reply to parent tweet's replyTweets array
+        if (!parentTweet.replyTweets.includes(tweet)) {
           parentTweet.replyTweets.push(tweet);
-          break;
         }
       }
     }
@@ -423,25 +437,11 @@ export function parseThreadedConversation(conversation: ThreadedConversation): T
 
   // Second pass: Handle threads
   for (const tweet of tweets) {
-    // Debug log for the tweet we're processing
-
     if (tweet.tweetDisplayType === 'SelfThread' && tweet.conversationId === tweet.id) {
-        // Debug log for all tweets in the conversation
-        console.log('All tweets in conversation:', tweets.filter(t => 
-            t.conversationId === tweet.conversationId
-        ).map(t => ({
-            id: t.id,
-            conversationId: t.conversationId,
-            tweetDisplayType: t.tweetDisplayType,
-            isReply: t.isReply,
-            userId: t.userId,
-            quotedStatusId: t.quotedStatusId,
-            retweetedStatusId: t.retweetedStatusId
-        })));
-
         const threadParts = tweets.filter(t => 
             t.conversationId === tweet.conversationId && 
             t.id !== tweet.id &&
+            t.userId === tweet.userId && // Only include tweets from the same author
             !t.quotedStatusId && 
             !t.retweetedStatusId 
         ).sort((a, b) => 
@@ -451,16 +451,15 @@ export function parseThreadedConversation(conversation: ThreadedConversation): T
         if (threadParts.length > 0) {
             tweet.isSelfThread = true;
             tweet.thread = threadParts;
-            // tweet.threadLength = threadParts.length;
+            
+            // Link thread parts to the main tweet (but don't override existing inReplyToStatus)
             for (const threadPart of threadParts) {
                 threadPart.isSelfThread = true;
+                // Only set inReplyToStatus if it's not already set (for the first thread part)
                 if (!threadPart.inReplyToStatus) {
                     threadPart.inReplyToStatus = tweet;
                 }
             }
-        } else {
-            // Debug log when no thread parts are found
-            console.log('No thread parts found for tweet:', tweet.id);
         }
     }
   }
