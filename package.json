@@ -19,8 +19,8 @@
   "author": "elizaOS",
   "license": "MIT",
   "scripts": {
-    "build": "rimraf dist && rollup -c",
-    "prepare": "npm run build",
+    "build": "rm -rf dist && rollup -c",
+    "prepare": "bun run build",
     "docs:generate": "typedoc --options typedoc.json",
     "docs:deploy": "npm run docs:generate && gh-pages -d docs",
     "format": "prettier --write src/**/*.ts",
