@@ -133,9 +133,8 @@ async function getSearchTimeline(
   params.set('features', stringify(features) ?? '');
   // params.set('fieldToggles', stringify(fieldToggles) ?? '');
  
-  console.log(`https://x.com/i/api/graphql/fDwnkykAJtODs46h_XZfVg/SearchTimeline?${params.toString()}`)
   const res = await requestApi<SearchTimeline>(
-    `https://x.com/i/api/graphql/fDwnkykAJtODs46h_XZfVg/SearchTimeline?${params.toString()}`,
+    `https://x.com/i/api/graphql/xQgzkJguvzoS8E_1LrVGPA/SearchTimeline?${params.toString()}`,
     auth,
   );
 
