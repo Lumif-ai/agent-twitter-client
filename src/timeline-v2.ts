@@ -106,6 +106,7 @@ export interface ThreadedConversation {
 export function parseLegacyTweet(
   user?: LegacyUserRaw,
   tweet?: LegacyTweetRaw,
+  tweetDisplayType?: string,
 ): ParseTweetResult {
   if (tweet == null) {
     return {
@@ -141,6 +142,20 @@ export function parseLegacyTweet(
   const urls = tweet.entities?.urls ?? [];
   const { photos, videos, sensitiveContent } = parseMediaGroups(media);
 
+  // Determine tweet display type based on properties
+  let displayType = tweetDisplayType || '';
+  if (!displayType) {
+    if (tweet.quoted_status_id_str) {
+      displayType = 'Quote';
+    } else if (tweet.retweeted_status_id_str || tweet.retweeted_status_result) {
+      displayType = 'Retweet';
+    } else if (tweet.conversation_id_str === tweet.id_str && (tweet.reply_count ?? 0) > 0) {
+      displayType = 'SelfThread';
+    } else {
+      displayType = 'Tweet';
+    }
+  }
+
   const tw: Tweet = {
     bookmarkCount: tweet.bookmark_count,
     conversationId: tweet.conversation_id_str,
@@ -161,6 +176,7 @@ export function parseLegacyTweet(
     retweets: tweet.retweet_count,
     text: tweet.full_text,
     thread: [],
+    replyTweets: [],
     urls: urls
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),
@@ -172,6 +188,7 @@ export function parseLegacyTweet(
     isRetweet: false,
     isPin: false,
     sensitiveContent: false,
+    tweetDisplayType: displayType,
   };
 
   if (tweet.created_at) {
@@ -206,6 +223,7 @@ export function parseLegacyTweet(
       const parsedResult = parseLegacyTweet(
         retweetedStatusResult?.core?.user_results?.result?.legacy,
         retweetedStatusResult?.legacy,
+        retweetedStatusResult?.legacy?.tweetDisplayType,
       );
 
       if (parsedResult.success) {
@@ -245,6 +263,7 @@ function parseResult(result?: TimelineResultRaw): ParseTweetResult {
   const tweetResult = parseLegacyTweet(
     result?.core?.user_results?.result?.legacy,
     result?.legacy,
+    result?.legacy?.tweetDisplayType,
   );
   if (!tweetResult.success) {
     return tweetResult;
@@ -339,6 +358,7 @@ export function parseTimelineEntryItemContentRaw(
       result.legacy.id_str =
         result.rest_id ??
         entryId.replace('conversation-', '').replace('tweet-', '');
+      result.legacy.tweetDisplayType = content.tweetDisplayType;
     }
 
     const tweetResult = parseResult(result);
@@ -371,18 +391,21 @@ export function parseAndPush(
   if (tweet) {
     tweets.push(tweet);
   }
+
+  return tweet;
 }
 
-export function parseThreadedConversation(
-  conversation: ThreadedConversation,
-): Tweet[] {
+export function parseThreadedConversation(conversation: ThreadedConversation): Tweet[] {
   const tweets: Tweet[] = [];
   const instructions =
     conversation.data?.threaded_conversation_with_injections_v2?.instructions ??
     [];
 
+  console.log('Total instructions:', instructions.length);
+
   for (const instruction of instructions) {
     const entries = instruction.entries ?? [];
+    console.log('Processing entries:', entries.length);
     for (const entry of entries) {
       const entryContent = entry.content?.itemContent;
       if (entryContent) {
@@ -398,29 +421,50 @@ export function parseThreadedConversation(
     }
   }
 
+  // First pass: Link replies to their parent tweets
   for (const tweet of tweets) {
     if (tweet.inReplyToStatusId) {
-      for (const parentTweet of tweets) {
-        if (parentTweet.id === tweet.inReplyToStatusId) {
-          tweet.inReplyToStatus = parentTweet;
-          break;
+      const parentTweet = tweets.find(t => t.id === tweet.inReplyToStatusId);
+      if (parentTweet) {
+        tweet.inReplyToStatus = parentTweet;
+        // Add reply to parent tweet's replyTweets array
+        if (!parentTweet.replyTweets.includes(tweet)) {
+          parentTweet.replyTweets.push(tweet);
         }
-      }
-    }
-
-    if (tweet.isSelfThread && tweet.conversationId === tweet.id) {
-      for (const childTweet of tweets) {
-        if (childTweet.isSelfThread && childTweet.id !== tweet.id) {
-          tweet.thread.push(childTweet);
-        }
-      }
-
-      if (tweet.thread.length === 0) {
-        tweet.isSelfThread = false;
       }
     }
   }
 
+  // Second pass: Handle threads
+  for (const tweet of tweets) {
+    if (tweet.tweetDisplayType === 'SelfThread' && tweet.conversationId === tweet.id) {
+        const threadParts = tweets.filter(t => 
+            t.conversationId === tweet.conversationId && 
+            t.id !== tweet.id &&
+            t.userId === tweet.userId && // Only include tweets from the same author
+            !t.quotedStatusId && 
+            !t.retweetedStatusId 
+        ).sort((a, b) => 
+            (a.timeParsed?.getTime() || 0) - (b.timeParsed?.getTime() || 0)
+        );
+
+        if (threadParts.length > 0) {
+            tweet.isSelfThread = true;
+            tweet.thread = threadParts;
+            
+            // Link thread parts to the main tweet (but don't override existing inReplyToStatus)
+            for (const threadPart of threadParts) {
+                threadPart.isSelfThread = true;
+                // Only set inReplyToStatus if it's not already set (for the first thread part)
+                if (!threadPart.inReplyToStatus) {
+                    threadPart.inReplyToStatus = tweet;
+                }
+            }
+        }
+    }
+  }
+
+  console.log('Final tweet count:', tweets.length);
   return tweets;
 }
 

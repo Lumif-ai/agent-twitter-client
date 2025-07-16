@@ -154,6 +154,7 @@ export interface TimelineResultRaw {
 }
 
 export interface LegacyTweetRaw {
+  tweetDisplayType?: string;
   bookmark_count?: number;
   conversation_id_str?: string;
   created_at?: string;
@@ -326,6 +327,7 @@ function parseTimelineTweet(
     retweets: tweet.retweet_count,
     text: tweet.full_text,
     thread: [],
+    replyTweets: [],
     urls: urls
       .filter(isFieldDefined('expanded_url'))
       .map((url) => url.expanded_url),

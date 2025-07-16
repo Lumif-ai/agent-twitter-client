@@ -1,5 +1,5 @@
 import { getScraper } from './test-utils';
-import { jest } from '@jest/globals';
+import { beforeAll, jest } from '@jest/globals';
 
 let shouldSkipV2Tests = false;
 let testUserId: string;
